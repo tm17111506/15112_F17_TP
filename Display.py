@@ -1,11 +1,19 @@
 from tkinter import *
+from Board import *
 
 class Display(object):
     def __init__(self):
-        self.boardSize = 8 #(9-1 since starts at 0)
+        self.boardSize = 4
         self.boardColor = "light goldenrod"
         self.bWidth, self.bHeight = 0,0
-        self.stoneList = []
+        self.gmBoard = None
+        self.inGame = False
+        self.endGame = False
+        self.winState = None
+        self.CP = None
+    
+    def getCP(self, CP):
+        self.CP = CP
     
     def draw(self):
         self.run()
@@ -14,22 +22,44 @@ class Display(object):
         data.margin = 30
         data.preview = False
         data.mouseX, data.mouseY = 0,0
+        #Coordinates for preview rect
         data.previewX, data.previewY, data.previewR = 0,0, 15
+        #Width and height of each board boxes
         self.bWidth = (data.width-2*data.margin)/self.boardSize
         self.bHeight = (data.height-2*data.margin)/self.boardSize
         
         #Draw stones
         data.dropped = False
-        data.color = "black"
+        data.color = "white"
         data.sr = 15
-        
+    
+    def restartGame(self, data):
+        self.init(data)
+        self.gmBoard.resetBoard()
+        self.inGame = False
+        self.endGame = False
+    
     def mousePressed(self, event, data):
         data.mouseX = event.x
         data.mouseY = event.y
         self.findRange(data)
+        self.gmBoard.legalBoard()
+        if data.dropped == True:
+            if data.color == "white": 
+                self.gmBoard.updateCPState(self.CP)
+                self.CP.get_play()
+                print(self.gmBoard.getBoard())
         
     def keyPressed(self, event, data):
-        pass
+        if not self.endGame and event.keysym == 's':
+            self.inGame = True
+            self.endGame = False
+        if event.keysym == 'r':
+            self.restartGame(data)
+        if event.keysym == 'Return':
+            self.winState = self.gmBoard.determineScore()
+            self.endGame = True
+            self.inGame = False
     
     def timerFired(self, data):
         pass        
@@ -37,21 +67,27 @@ class Display(object):
     def findRange(self, data):
         mx, my = 0,0
         if (data.mouseX-data.margin)%self.bWidth <= self.bWidth/2:
-            mx = (data.mouseX-data.margin)//self.bWidth
+            mx = int((data.mouseX-data.margin)//self.bWidth)
         else: 
-            mx = ((data.mouseX-data.margin)//self.bWidth) + 1
+            mx = int(((data.mouseX-data.margin)//self.bWidth) + 1)
         
         if (data.mouseY-data.margin)%self.bHeight <= self.bHeight/2:
-            my = (data.mouseY-data.margin)//self.bHeight
+            my = int((data.mouseY-data.margin)//self.bHeight)
         else: 
-            my = ((data.mouseY-data.margin)//self.bHeight) + 1
+            my = int(((data.mouseY-data.margin)//self.bHeight) + 1)
         
         px = mx*self.bWidth + data.margin
         py = my*self.bHeight + data.margin
         
-        if data.previewX == px and data.previewY == py:
+        if data.previewX == px and data.previewY == py and \
+            self.gmBoard.getBoard()[mx][my] == None:
+        # if data.previewX == px and data.previewY == py and \
+        #         self.gmBoard.isMoveLegal(mx, my, data.color):
             data.dropped=True
+            #Flips the color after isMoveLegal is checked
             data.color = "white" if data.color == "black" else "black"
+            if data.color == "black":
+                self.gmBoard.add(mx, my, data.color)
         else:
             data.dropped=False
         
@@ -85,11 +121,16 @@ class Display(object):
                                     fill = "white", width=2)
     
     def drawStone(self, canvas, data):
-        for stone in self.stoneList:
-            canvas.create_oval(stone[0]-data.sr, stone[1]-data.sr,
-                                stone[0]+data.sr, stone[1]+data.sr,
-                                fill = stone[2])
-    
+        self.gmBoard.legalBoard()
+        board = self.gmBoard.getBoard()
+        for row in range(len(board)):
+            for col in range(len(board[0])):
+                if board[row][col] != None:
+                    x = row*self.bWidth + data.margin
+                    y = col*self.bHeight + data.margin
+                    canvas.create_oval(x-data.sr, y-data.sr, x+data.sr, y+data.sr,
+                                        fill = board[row][col])
+        
     def drawBoard(self, canvas, data):
         dy = self.bHeight
         dx = self.bWidth
@@ -99,12 +140,40 @@ class Display(object):
             canvas.create_line(data.margin+i*dx, data.margin, 
                                 data.margin+i*dx, data.height-data.margin)
     
+    def drawStartScreen(self, canvas, data):
+        start=70
+        margin = 50
+        canvas.create_text(data.width/2, margin+start, text = "GO Game!",
+                            font="Times 26 bold")
+        canvas.create_text(data.width/2, margin*2+start, text = "Press 's' to start",
+                            font="Times 16")
+        canvas.create_text(data.width/2, margin*3+start, text = "Press 'r' to restart",
+                            font="Times 16")
+        canvas.create_text(data.width/2, margin*4+start, text = "Press 'Enter' to End",
+                            font="Times 16")
+    
+    def drawEndScreen(self, canvas, data):
+        blackScore, whiteScore, win = self.winState
+        margin = 50
+        canvas.create_text(data.width/2, data.height/2-margin*2, text = "Game Over!",
+                            font="Helvetica 26 bold")
+        canvas.create_text(data.width/2, data.height/2-margin, text = "%s wins!"%win,
+                            font="Helvetica 20 bold")
+        canvas.create_text(data.width/2, data.height/2, text = "Black Score: %d"%blackScore,
+                            font="Helvetica 10 bold")
+        canvas.create_text(data.width/2, data.height/2+margin/2, text = "White Score: %d"%whiteScore,
+                            font="Helvetica 10 bold")
+    
     def redrawAll(self, canvas, data):
-        self.drawBoard(canvas, data)
-        self.drawStone(canvas, data)
-        if data.dropped:
-            self.stoneList.append((data.previewX, data.previewY, data.color))
-        else: self.drawPreview(canvas, data)
+        if not self.inGame:
+            if self.endGame: self.drawEndScreen(canvas, data)
+            else: self.drawStartScreen(canvas, data)
+        elif self.endGame:
+            self.drawEndScreen(canvas, data)
+        else:
+            self.drawBoard(canvas, data)
+            self.drawStone(canvas, data)
+            if not data.dropped: self.drawPreview(canvas, data)
        
     def run(self, width=400, height=400):
         def redrawAllWrapper(canvas, data):
@@ -147,6 +216,3 @@ class Display(object):
         # and launch the app
         root.mainloop()  # blocks until window is closed
         print("bye!")
-
-d = Display()
-d.draw()
