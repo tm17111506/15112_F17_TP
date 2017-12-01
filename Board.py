@@ -8,12 +8,17 @@ class Board(object):
         self.captured = set()
         self.score = {"black":0, "white":0}
         self.calcualted=False
+        self.stoneL = []
+        self.currPlayer = "black"
     
     def add(self, row, col, color):
+        self.stoneL.append((row, col))
         self.board[row][col] = color
+        self.currPlayer = color
     
     def remove(self, row, col):
         self.board[row][col] = None
+        self.stoneL.remove((row, col))
     
     def getBoard(self):
         return self.board
@@ -44,14 +49,24 @@ class Board(object):
                 return False
     
     def legalBoard(self):
-        for row in range(len(self.board)):
-            for col in range(len(self.board[0])):
-                self.checkCaptured(row, col, self.board[row][col])
-                if self.captured != set():
-                    for i in self.captured:
-                        self.score[self.board[i[0]][i[1]]] += 1
-                        self.board[i[0]][i[1]] = None
-                    self.captured = set()
+        for stone in self.stoneL:
+            row, col = stone[0], stone[1]
+            self.checkCaptured(row, col, self.board[row][col])
+            if self.captured != set():
+                for i in self.captured:
+                    c = "black" if self.board[i[0]][i[1]] == "white" else "white"
+                    self.score[c] += 1
+                    self.remove(i[0], i[1])
+                self.captured = set()
+        
+        # for row in range(len(self.board)):
+        #     for col in range(len(self.board[0])):
+        #         self.checkCaptured(row, col, self.board[row][col])
+        #         if self.captured != set():
+        #             for i in self.captured:
+        #                 self.score[self.board[i[0]][i[1]]] += 1
+        #                 self.board[i[0]][i[1]] = None
+        #             self.captured = set()
     
     def resetBoard(self):
         l = [None for i in range(self.size)]
@@ -79,11 +94,21 @@ class Board(object):
             self.calcualted=True
             
         win = None
-        if self.score["black"] > self.score["white"]: win = "Black"
-        elif self.score["black"] < self.score["white"]: win = "White"
+        if self.score["black"] > self.score["white"]: win = "black"
+        elif self.score["black"] < self.score["white"]: win = "white"
         else: win = None
         
         return (self.score["black"], self.score["white"], win)
+    
+    def updateCPState(self, CP):
+        state = [(i[0], i[1], self.board[i[0]][i[1]]) for i in self.stoneL]
+        CP.update(state)
+    
+    def calcCPScore(self, step):
+        row, col, color = step
+        self.add(row, col, color)
+        self.legalBoard()
+        
     
     
         

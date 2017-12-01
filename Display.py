@@ -10,6 +10,10 @@ class Display(object):
         self.inGame = False
         self.endGame = False
         self.winState = None
+        self.CP = None
+    
+    def getCP(self, CP):
+        self.CP = CP
     
     def draw(self):
         self.run()
@@ -40,6 +44,10 @@ class Display(object):
         data.mouseY = event.y
         self.findRange(data)
         self.gmBoard.legalBoard()
+        if data.dropped == True:
+            self.gmBoard.updateCPState(self.CP)
+            if data.color == "white": self.CP.get_play()
+            
         
     def keyPressed(self, event, data):
         if not self.endGame and event.keysym == 's':
@@ -69,9 +77,11 @@ class Display(object):
         
         px = mx*self.bWidth + data.margin
         py = my*self.bHeight + data.margin
-
+        
         if data.previewX == px and data.previewY == py and \
-                self.gmBoard.isMoveLegal(mx, my, data.color):
+            self.gmBoard.getBoard()[mx][my] == None:
+        # if data.previewX == px and data.previewY == py and \
+        #         self.gmBoard.isMoveLegal(mx, my, data.color):
             data.dropped=True
             #Flips the color after isMoveLegal is checked
             data.color = "white" if data.color == "black" else "black"
