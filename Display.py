@@ -10,7 +10,9 @@ class Display(object):
         self.inGame = False
         self.endGame = False
         self.winState = None
+        self.chooseNumPlayer = False
         self.CP = None
+        self.numPlayer = 0
     
     def getCP(self, CP):
         self.CP = CP
@@ -38,28 +40,35 @@ class Display(object):
         self.gmBoard.resetBoard()
         self.inGame = False
         self.endGame = False
+        self.chooseNumPlayer = False
     
     def mousePressed(self, event, data):
         data.mouseX = event.x
         data.mouseY = event.y
         self.findRange(data)
         self.gmBoard.legalBoard()
-        if data.dropped == True:
-            if data.color == "white": 
-                self.gmBoard.updateCPState(self.CP)
-                self.CP.get_play()
-                print(self.gmBoard.getBoard())
+        # if data.dropped == True:
+        #     if data.color == "white": 
+        #         self.gmBoard.updateCPState(self.CP)
+        #         self.CP.get_play()
         
     def keyPressed(self, event, data):
-        if not self.endGame and event.keysym == 's':
-            self.inGame = True
-            self.endGame = False
-        if event.keysym == 'r':
-            self.restartGame(data)
-        if event.keysym == 'Return':
-            self.winState = self.gmBoard.determineScore()
-            self.endGame = True
-            self.inGame = False
+        if not self.chooseNumPlayer and event.keysym == '1':
+            self.chooseNumPlayer = True
+            self.numPlayer = 1
+        elif not self.chooseNumPlayer and event.keysym == '2':
+            self.chooseNumPlayer = True
+            self.numPlayer = 2
+        if self.chooseNumPlayer:
+            if not self.endGame and event.keysym == 's':
+                self.inGame = True
+                self.endGame = False
+            if event.keysym == 'r':
+                self.restartGame(data)
+            if event.keysym == 'Return':
+                self.winState = self.gmBoard.determineScore()
+                self.endGame = True
+                self.inGame = False
     
     def timerFired(self, data):
         pass        
@@ -81,12 +90,16 @@ class Display(object):
         
         if data.previewX == px and data.previewY == py and \
             self.gmBoard.getBoard()[mx][my] == None:
-        # if data.previewX == px and data.previewY == py and \
-        #         self.gmBoard.isMoveLegal(mx, my, data.color):
             data.dropped=True
-            #Flips the color after isMoveLegal is checked
             data.color = "white" if data.color == "black" else "black"
-            if data.color == "black":
+            if self.numPlayer == 1:
+                if data.color == "black":
+                    self.gmBoard.add(mx, my, data.color)
+                if data.color == "white":
+                    self.gmBoard.updateCPState(self.CP)
+                    move = self.CP.get_play()
+                    self.gmBoard.add(move[0], move[1], "white")
+            else:
                 self.gmBoard.add(mx, my, data.color)
         else:
             data.dropped=False
@@ -152,6 +165,18 @@ class Display(object):
         canvas.create_text(data.width/2, margin*4+start, text = "Press 'Enter' to End",
                             font="Times 16")
     
+    def drawUserScreen(self, canvas, data):
+        start=70
+        margin = 50
+        canvas.create_text(data.width/2, margin+start, text = "GO Game!",
+                            font="Times 26 bold")
+        canvas.create_text(data.width/2, margin*2+start, text = "Choose Number of PLayers",
+                            font="Times 16")
+        canvas.create_text(data.width/2, margin*3+start, text = "Press '1' for 1 player",
+                            font="Times 16")
+        canvas.create_text(data.width/2, margin*4+start, text = "Press '2' for 2 player",
+                            font="Times 16")
+    
     def drawEndScreen(self, canvas, data):
         blackScore, whiteScore, win = self.winState
         margin = 50
@@ -165,15 +190,18 @@ class Display(object):
                             font="Helvetica 10 bold")
     
     def redrawAll(self, canvas, data):
-        if not self.inGame:
-            if self.endGame: self.drawEndScreen(canvas, data)
-            else: self.drawStartScreen(canvas, data)
-        elif self.endGame:
-            self.drawEndScreen(canvas, data)
+        if not self.chooseNumPlayer:
+            self.drawUserScreen(canvas, data)
         else:
-            self.drawBoard(canvas, data)
-            self.drawStone(canvas, data)
-            if not data.dropped: self.drawPreview(canvas, data)
+            if not self.inGame:
+                if self.endGame: self.drawEndScreen(canvas, data)
+                else: self.drawStartScreen(canvas, data)
+            elif self.endGame:
+                self.drawEndScreen(canvas, data)
+            else:
+                self.drawBoard(canvas, data)
+                self.drawStone(canvas, data)
+                if not data.dropped: self.drawPreview(canvas, data)
        
     def run(self, width=400, height=400):
         def redrawAllWrapper(canvas, data):

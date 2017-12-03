@@ -22,7 +22,6 @@ class CPBoard(object):
         # Returns a representation of the starting state of the game.
         pass
     
-    #Problem with current_player, the color is not stored on board!!
     def current_player(self, state):
         # Takes the game state and returns the current player's
         # number.
@@ -35,7 +34,8 @@ class CPBoard(object):
         # Returns the new game state.
         nState = state[:]
         nState.append((play[0], play[1], currPlayer))
-        return nState
+        newState = self.checkCaptured(nState[:])
+        return newState
 
     def legal_plays(self, state_history):
         # Takes a sequence of game states representing the full
@@ -57,13 +57,27 @@ class CPBoard(object):
         #Calls calcCPScore, and then determineScore at when all elements are added
         b = Board(self.board.size)
         state = state_history[-1]
-        print("Check win state", state)
         for step in state:
             b.calcCPScore(step)
         
         blackScore, whiteScore, winner = b.determineScore()
         return winner
-
+    
+    def removeFromState(self, capList, state):
+        if capList == set():
+            return state
+        else:
+            #Low efficiency!!
+            for elem in state:
+                if (elem[0], elem[1]) in capList:
+                    state.remove(elem)
+            return state
+    
+    def checkCaptured(self, state):
+        b = Board(self.board.size)
+        capturedList = b.checkCapturedCP(state)
+        return self.removeFromState(capturedList, state)
+            
 class MonteCarlo(object):
     def __init__(self, cpboard, **kwargs):
         # Takes an instance of a Board and optionally some keyword
@@ -90,25 +104,26 @@ class MonteCarlo(object):
         # current game state and return it.
         self.max_depth = 0
         state = self.states[-1]
+
         player = self.cpboard.current_player(state)
-        print("Self.states", self.states)
         legal = self.cpboard.legal_plays(self.states[:])
         
         if legal == []: return None
-        if len(legal) == 1: return legal[0]
+        if len(legal) == 1: return legal
         
         games = 0
         begin = datetime.datetime.utcnow()
-        self.run_simulation()
-        # while datetime.datetime.utcnow() - begin < self.calculation_time:
-        #     self.run_simulation()
-        #     games += 1
-        
+        #self.run_simulation()
+        while datetime.datetime.utcnow() - begin < self.calculation_time:
+            self.run_simulation()
+            games += 1
+
         moves_states = [(s, self.cpboard.next_state(state, s, player)) for s in legal]
         #p is the next state to move to, S is the state simulated / ran
         percent_wins, move = max((self.wins.get((player, tuple(S)), 0) /self.plays.get((player, tuple(S)), 1),p)
             for p, S in moves_states)
         
+        print(percent_wins, move)
         return move
     
     def run_simulation(self):
@@ -121,16 +136,13 @@ class MonteCarlo(object):
         state = states_copy[-1]
         visited_states = set()
         player = self.cpboard.current_player(state)
+        winner = self.cpboard.winner(states_copy)
         
         expand = True
         for move in range(self.max_moves):
             #Get all possible next moves
-            print("State", state)
             legal = self.cpboard.legal_plays(states_copy)
-            print("Legal", legal)
-            # legal = self.cpboard.legal_plays(states_copy)
             move_states = [self.cpboard.next_state(state, m, player) for m in legal]
-            # move_states = [(m, self.cpboard.next_state(state, m, player)) for m in legal]
             
             if all(plays.get((player, tuple(S))) for S in move_states):
                 #If data is available for all plays in moves_state
@@ -144,13 +156,11 @@ class MonteCarlo(object):
             else:
                 state = choice(move_states)
                 move = (state[-1][0], state[-1][1])
-                print(state, move)
                                 
             #Chooses a random play
             #play = choice(legal)
             #state = self.board.next_state(state, play) #Updates the board
             states_copy.append(state)
-            print("Full State", states_copy)
             
             # winner = self.board.winner(states_copy)
             # if winner: break
@@ -164,12 +174,10 @@ class MonteCarlo(object):
                 #     self.max_depth = t
             
             visited_states.add((player, tuple(state)))
-            print("visited", visited_states)
             
             #Switches between black / white
             player = self.cpboard.current_player(state)
             winner = self.cpboard.winner(states_copy)
-            print("Current Player and win", player, winner)
             # if winner: break
         
         for player, state in visited_states:
@@ -178,7 +186,5 @@ class MonteCarlo(object):
                 #Not a tracked node
             self.plays[(player, tuple(state))] += 1
             #But winner is inside the for loop tho
-            print("COUNT", state, player, winner)
             if player == winner: 
-                print("Player == winner")
                 self.wins[(player, tuple(state))] += 1

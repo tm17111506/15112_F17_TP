@@ -6,6 +6,7 @@ class Board(object):
         l = [None for i in range(self.size)]
         self.board = [copy.deepcopy(l) for j in range(self.size)]
         self.captured = set()
+        self.surrounded = {"black":set(), "white":set()}
         self.score = {"black":0, "white":0}
         self.calcualted=False
         self.stoneL = []
@@ -22,6 +23,28 @@ class Board(object):
     
     def getBoard(self):
         return self.board
+    
+    def checkSurrounded(self, x, y, color, l=None):
+        if l == None: 
+            l = set()
+        if x<0 or x >= self.size or y < 0 or y >= self.size:
+            return True
+        if self.board[x][y] == color: return True
+        if (x,y) in l:
+            return True
+        if self.board[x][y] != color and self.board[x][y] != None:
+            return False
+        else:
+            l.add((x,y))
+            solution = self.checkSurrounded(x, y-1, color, l) and \
+                        self.checkSurrounded(x, y+1, color, l) and \
+                        self.checkSurrounded(x-1, y, color, l) and \
+                        self.checkSurrounded(x+1, y, color, l)
+            if solution:
+                self.surrounded[color] = l
+                return True
+            self.surrounded[color] = set()
+            return False
     
     #x, y coordinate
     def checkCaptured(self, x, y, color, l=None):
@@ -40,7 +63,6 @@ class Board(object):
                         self.checkCaptured(x, y+1, color, l) and \
                         self.checkCaptured(x-1, y, color, l) and \
                         self.checkCaptured(x+1, y, color, l)
-            
             if solution: 
                 self.captured = l
                 return True
@@ -48,27 +70,27 @@ class Board(object):
                 self.captured = set()
                 return False
     
+    def checkCapturedCP(self, stateL):
+        capturedL = set()
+        for state in stateL:
+            row, col, color = state
+            self.add(row, col, color)
+            self.checkCaptured(row, col, color)
+            if self.captured != set():
+                capturedL.update(self.captured)
+                self.captured = set()
+        return capturedL
+    
     def legalBoard(self):
         for stone in self.stoneL:
             row, col = stone[0], stone[1]
             self.checkCaptured(row, col, self.board[row][col])
             if self.captured != set():
                 for i in self.captured:
-                    print("HERE HERE CAPTURED")
-                    print()
-                    c = "black" if self.board[i[0]][i[1]] == "white" else "white"
-                    self.score[c] += 1
+                    #c = "black" if self.board[i[0]][i[1]] == "white" else "white"
+                    #self.score[c] += 1
                     self.remove(i[0], i[1])
                 self.captured = set()
-        
-        # for row in range(len(self.board)):
-        #     for col in range(len(self.board[0])):
-        #         self.checkCaptured(row, col, self.board[row][col])
-        #         if self.captured != set():
-        #             for i in self.captured:
-        #                 self.score[self.board[i[0]][i[1]]] += 1
-        #                 self.board[i[0]][i[1]] = None
-        #             self.captured = set()
     
     def resetBoard(self):
         l = [None for i in range(self.size)]
@@ -88,17 +110,27 @@ class Board(object):
     
     def determineScore(self):
         if not self.calcualted:
+            bSet, wSet = set(), set()
+            #Number of stones on the board
             for row in range(len(self.board)):
                 for col in range(len(self.board[0])):
                     if self.board[row][col] != None:
                         self.score[self.board[row][col]] += 1
+                    else: #If == None
+                        self.checkSurrounded(row, col, "black")
+                        b = self.surrounded["black"]
+                        self.checkSurrounded(row, col, "white")
+                        w = self.surrounded["white"]
+                        if b != set(): bSet = bSet.union(b)
+                        if w != set(): wSet = wSet.union(w)
+            self.score["black"] += len(bSet)
+            self.score["white"] += len(wSet)
             self.calcualted=True
             
         win = None
         if self.score["black"] > self.score["white"]: win = "black"
         elif self.score["black"] < self.score["white"]: win = "white"
         else: win = None
-        
         return (self.score["black"], self.score["white"], win)
     
     def updateCPState(self, CP):
