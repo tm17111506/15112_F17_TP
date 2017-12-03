@@ -2,6 +2,7 @@ from __future__ import division
 import datetime
 from random import choice
 from math import log, sqrt
+import os
 from Board import*
 
 '''
@@ -93,7 +94,47 @@ class MonteCarlo(object):
         #Stats
         self.wins={}
         self.plays={}
+        self.readData()
 
+    def readFile(self, path):
+        with open(path, "rt") as f:
+            return f.read()
+    
+    def writeFile(self, path, contents):
+        with open(path, "wt") as f:
+            f.write(contents)
+        
+    def readData(self):
+        winsData = self.readFile("Winner_Dictionary.txt").splitlines()
+        playsData = self.readFile("Player_Dictionary.txt").splitlines()
+        if len(winsData) != 0:
+            for i in range(0,len(winsData),2):
+                self.wins[(winsData[i])] = int(winsData[i+1])
+        if len(playsData) != 0:
+            for j in range(0,len(playsData),2):
+                self.plays[(playsData[j])] = int(playsData[j+1])
+        
+        # os.close("Winner_Dictionary.txt")
+        # os.close("Player_Dictionoary.txt")
+    
+    def writesData(self):
+        winsData, playsData = [], []
+        for wKey in self.wins:
+            winsData.append(str(wKey))
+            winsData.append(str(self.wins[wKey]))
+        for pKey in self.plays:
+            playsData.append(str(pKey))
+            playsData.append(str(self.plays[pKey]))
+        
+        winsData = "\n".join(winsData)
+        playsData = "\n".join(playsData)
+        
+        self.writeFile("Winner_Dictionary.txt", winsData)
+        self.writeFile("Player_Dictionary.txt", playsData)
+        
+        # os.close("Winner_Dictionary.txt")
+        # os.close("Player_Dictionoary.txt")
+        
     def update(self, state):
         # Takes a game state, and appends it to the history.
         # Here we input the state of the board, from class board
@@ -117,7 +158,9 @@ class MonteCarlo(object):
         while datetime.datetime.utcnow() - begin < self.calculation_time:
             self.run_simulation()
             games += 1
-
+        
+        self.writesData()
+        
         moves_states = [(s, self.cpboard.next_state(state, s, player)) for s in legal]
         #p is the next state to move to, S is the state simulated / ran
         percent_wins, move = max((self.wins.get((player, tuple(S)), 0) /self.plays.get((player, tuple(S)), 1),p)
