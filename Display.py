@@ -32,7 +32,7 @@ class Display(object):
         
         #Draw stones
         data.dropped = False
-        data.color = "white"
+        data.color = "black"
         data.sr = 15
     
     def restartGame(self, data):
@@ -47,10 +47,6 @@ class Display(object):
         data.mouseY = event.y
         self.findRange(data)
         self.gmBoard.legalBoard()
-        # if data.dropped == True:
-        #     if data.color == "white": 
-        #         self.gmBoard.updateCPState(self.CP)
-        #         self.CP.get_play()
         
     def keyPressed(self, event, data):
         if not self.chooseNumPlayer and event.keysym == '1':
@@ -71,7 +67,15 @@ class Display(object):
                 self.inGame = False
     
     def timerFired(self, data):
-        pass        
+        if data.color == "white" and self.numPlayer == 1 and self.inGame:
+            self.gmBoard.updateCPState(self.CP)
+            move = self.CP.get_play()
+            self.gmBoard.add(move[0], move[1], "white")
+            data.color = "white" if data.color == "black" else "black"
+        if self.gmBoard.checkEndGame():
+            self.winState = self.gmBoard.determineScore()
+            self.endGame = True
+            self.inGame = False
     
     def findRange(self, data):
         mx, my = 0,0
@@ -91,16 +95,16 @@ class Display(object):
         if data.previewX == px and data.previewY == py and \
             self.gmBoard.getBoard()[mx][my] == None:
             data.dropped=True
-            data.color = "white" if data.color == "black" else "black"
             if self.numPlayer == 1:
                 if data.color == "black":
                     self.gmBoard.add(mx, my, data.color)
-                if data.color == "white":
-                    self.gmBoard.updateCPState(self.CP)
-                    move = self.CP.get_play()
-                    self.gmBoard.add(move[0], move[1], "white")
+                # if data.color == "white":
+                #     self.gmBoard.updateCPState(self.CP)
+                #     move = self.CP.get_play()
+                #     self.gmBoard.add(move[0], move[1], "white")
             else:
                 self.gmBoard.add(mx, my, data.color)
+            data.color = "white" if data.color == "black" else "black"
         else:
             data.dropped=False
         

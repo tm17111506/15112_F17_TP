@@ -100,13 +100,6 @@ class Board(object):
     def resetScore(self):
         self.score = {"black":0, "white":0}
         self.calcualted = False
-
-    def isMoveLegal(self, x, y, c): #C is the flipped of the visual color
-        if self.board[x][y] != None: return False
-        if (x-1<0 or self.board[x-1][y] == c) and (x>=self.size or self.board[x+1][y]== c) \
-            and (y-1<0 or self.board[x][y-1] == c) and (y>=self.size or self.board[x][y+1] == c):
-                return False
-        return True
     
     def determineScore(self):
         if not self.calcualted:
@@ -116,7 +109,7 @@ class Board(object):
                 for col in range(len(self.board[0])):
                     if self.board[row][col] != None:
                         self.score[self.board[row][col]] += 1
-                    else: #If == None
+                    elif self.countNone() < 24: #If == None
                         self.checkSurrounded(row, col, "black")
                         b = self.surrounded["black"]
                         self.checkSurrounded(row, col, "white")
@@ -142,6 +135,16 @@ class Board(object):
         self.add(row, col, color)
         self.legalBoard()
         
+    def checkEndGame(self):
+        numNone = self.countNone()
+        if numNone <= self.size**2 * 0.15:
+            return True
+        return False
     
-    
+    def countNone(self):
+        num = 0
+        for l in self.board:
+            for elem in l:
+                if elem == None: num += 1
+        return num
         
