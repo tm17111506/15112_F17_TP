@@ -14,7 +14,7 @@ b = Board(5)
 d = Display()
 d.gmBoard = b
 cpB = CPBoard(b)
-mc = MonteCarlo(cpB, time=15, max_moves=100)
+mc = MonteCarlo(cpB, time=15, max_moves=20)
 d.getCP(mc)
 
 def main():

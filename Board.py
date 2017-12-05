@@ -1,5 +1,5 @@
 import copy
-
+ 
 class Board(object):
     def __init__(self, boardSize):
         self.size = boardSize
@@ -87,8 +87,8 @@ class Board(object):
             self.checkCaptured(row, col, self.board[row][col])
             if self.captured != set():
                 for i in self.captured:
-                    #c = "black" if self.board[i[0]][i[1]] == "white" else "white"
-                    #self.score[c] += 1
+                    c = "black" if self.board[i[0]][i[1]] == "white" else "white"
+                    self.score[c] += 1
                     self.remove(i[0], i[1])
                 self.captured = set()
     

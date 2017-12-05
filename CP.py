@@ -34,26 +34,20 @@ class CPBoard(object):
         # Takes the game state, and the move to be applied.
         # Returns the new game state.
         nState = state[:]
+        if not isinstance(nState, list): nState = list(nState)
         nState.append((play[0], play[1], currPlayer))
         newState = self.checkCaptured(nState[:])
         return newState
 
-    def legal_plays(self, state_history):
-        # Takes a sequence of game states representing the full
-        # game history, and returns the full list of moves that
-        # are legal plays for the current player.
+    def legal_plays(self, state_history, prevMove = (-1,-1)):
         currSet = set()
         for item in state_history[-1]:
             currSet.add((item[0], item[1]))
         legalPlay = self.fullPos - currSet
+        if prevMove in legalPlay: legalPlay.discard(prevMove)
         return legalPlay
         
-    def winner(self, state_history):
-        # Takes a sequence of game states representing the full
-        # game history.  If the game is now won, return the player
-        # number.  If the game is still ongoing, return zero.  If
-        # the game is tied, return a different distinct value, e.g. -1.
-        
+    def winner(self, state_history):     
         #Create a new Board instance, add the elements in the latest state
         #Calls calcCPScore, and then determineScore at when all elements are added
         b = Board(self.board.size)
@@ -68,7 +62,6 @@ class CPBoard(object):
         if capList == set():
             return state
         else:
-            #Low efficiency!!
             for elem in state:
                 if (elem[0], elem[1]) in capList:
                     state.remove(elem)
@@ -81,9 +74,6 @@ class CPBoard(object):
             
 class MonteCarlo(object):
     def __init__(self, cpboard, **kwargs):
-        # Takes an instance of a Board and optionally some keyword
-        # arguments.  Initializes the list of game states and the
-        # statistics tables.
         self.C = 1.41
         self.cpboard = cpboard
         self.states = []
@@ -95,6 +85,8 @@ class MonteCarlo(object):
         self.wins={}
         self.plays={}
         self.readData()
+        self.prevMove = (-1,-1)
+        self.empBoard = self.emptyBoard()
 
     def readFile(self, path):
         with open(path, "rt") as f:
@@ -114,9 +106,6 @@ class MonteCarlo(object):
             for j in range(0,len(playsData),2):
                 self.plays[(playsData[j])] = int(playsData[j+1])
         
-        # os.close("Winner_Dictionary.txt")
-        # os.close("Player_Dictionoary.txt")
-    
     def writesData(self):
         winsData, playsData = [], []
         for wKey in self.wins:
@@ -136,18 +125,16 @@ class MonteCarlo(object):
         # os.close("Player_Dictionoary.txt")
         
     def update(self, state):
-        # Takes a game state, and appends it to the history.
-        # Here we input the state of the board, from class board
         self.states.append(state)
 
     def get_play(self):
         # Causes the AI to calculate the best move from the
         # current game state and return it.
-        self.max_depth = 0
+        print("Start CP")
         state = self.states[-1]
 
         player = self.cpboard.current_player(state)
-        legal = self.cpboard.legal_plays(self.states[:])
+        legal = self.cpboard.legal_plays(self.states[:], self.prevMove)
         
         if legal == []: return None
         if len(legal) == 1: return legal
@@ -161,12 +148,15 @@ class MonteCarlo(object):
         
         self.writesData()
         
-        moves_states = [(s, self.cpboard.next_state(state, s, player)) for s in legal]
+        moves_states = [(m, self.cpboard.next_state(state, m, player)) for m in legal]
         #p is the next state to move to, S is the state simulated / ran
+        moveInPlay = self.formatMoveStates(moves_states[:])
+        print(moveInPlay)
         percent_wins, move = max((self.wins.get((player, tuple(S)), 0) /self.plays.get((player, tuple(S)), 1),p)
-            for p, S in moves_states)
+            for p, S in moveInPlay)
         
-        print(percent_wins, move)
+        print("Done calc", percent_wins, move)
+        self.prevMove = move
         return move
     
     def run_simulation(self):
@@ -186,48 +176,130 @@ class MonteCarlo(object):
             #Get all possible next moves
             legal = self.cpboard.legal_plays(states_copy)
             move_states = [self.cpboard.next_state(state, m, player) for m in legal]
-            
-            if all(plays.get((player, tuple(S))) for S in move_states):
+            #CHANGE HERE
+            isAllMoveInPlay, m_s = self.isMoveInPlay(move_states)
+            if isAllMoveInPlay:
+            # if all(plays.get((player, tuple(S))) for S in move_states):
                 #If data is available for all plays in moves_state
-                log_total = log(sum(plays[(player, tuple(S))] for S in move_states))
+                log_total = log(sum(plays[(player, S)] for S in m_s))
                 value, state = max(
-                        ((wins[(player, tuple(S))]/plays[(player, tuple(S))]) +
-                        self.C*sqrt(log_total/plays[(player, tuple(S))]), S)
-                        for S in move_states
+                        ((wins[(player, S)]/plays[(player, S)]) +
+                        self.C*sqrt(log_total/plays[(player, S)]), S)
+                        for S in m_s
                     )
                 move = (state[0], state[1])
             else:
-                state = choice(move_states)
+                formated_move_states = self.formatMoveStates(move_states)
+                state = choice(formated_move_states)
                 move = (state[-1][0], state[-1][1])
                                 
-            #Chooses a random play
-            #play = choice(legal)
-            #state = self.board.next_state(state, play) #Updates the board
             states_copy.append(state)
             
-            # winner = self.board.winner(states_copy)
-            # if winner: break
-            
-            if expand and (player, tuple(state)) not in plays:
+            #CHANGE HERE
+            if expand and (player, self.setState(state[:])) not in plays:
+            # if expand and (player, tuple(state)) not in plays:
                 expand = False
-                #Adds if it is unseen node
-                plays[(player, tuple(state))] = 0
-                wins[(player, tuple(state))] = 0
-                # if t > self.max_depth: #Keeps tracks of deepest level within max_moves
-                #     self.max_depth = t
+                plays[(player, self.setState(state[:]))] = 0
+                wins[(player, self.setState(state[:]))] = 0
             
-            visited_states.add((player, tuple(state)))
+            #CHANGE HERE
+            visited_states.add((player, self.setState(state[:])))
             
             #Switches between black / white
             player = self.cpboard.current_player(state)
             winner = self.cpboard.winner(states_copy)
-            # if winner: break
         
         for player, state in visited_states:
-            if (player, tuple(state)) not in self.plays:
+            if (player, state) not in self.plays:
                 continue
-                #Not a tracked node
-            self.plays[(player, tuple(state))] += 1
-            #But winner is inside the for loop tho
+            self.plays[(player, state)] += 1
+
             if player == winner: 
-                self.wins[(player, tuple(state))] += 1
+                self.wins[(player, state)] += 1
+    
+    def setState(self, state):
+        return tuple(set(state))
+    
+    def emptyBoard(self):
+        b = []
+        for row in range(self.cpboard.board.size):
+            l = []
+            for col in range(self.cpboard.board.size):
+                l.append(None)
+            b.append(l)
+        return b
+    
+    def stateToBoard(self, state):
+        b = copy.deepcopy(self.empBoard)
+        if not isinstance(state, list): state = [state[:]]
+        for elem in state:
+            b[elem[0]][elem[1]] = elem[2]
+        return b
+    
+    def boardToState(self, boardList):
+        stateList = []
+        for board in boardList:
+            s = []
+            for row in range(len(board)):
+                for col in range(len(board[0])):
+                    if board[row][col] != None:
+                        s.append((row, col, board[row][col]))
+            if len(s) < 2: stateList.append(s[0])
+            else:
+                s = self.setState(s)
+                stateList.append(s)
+        return stateList
+    
+    def allRotation(self, state):
+        numRotate = 3
+        currBoard = self.stateToBoard(state)
+        
+        rotatedBoard = []
+        rotatedBoard.append(currBoard)
+        for i in range(numRotate):
+            temp = []
+            b = list(zip(*currBoard[::-1]))
+            for item in b:
+                temp.append(list(item))
+            rotatedBoard.append(temp)
+            currBoard = b
+        
+        stateList = self.boardToState(rotatedBoard)
+        return stateList
+    
+    #Finds a list of moves that are in plays
+    #If not in play, adds one of the rotates
+    def formatMoveStates(self, m_s):
+        move_rotated = []
+        total_move_state = []
+        curr_move = []
+        for move in m_s:
+            curr_move.append(move[0])
+            move_rotated.append(self.allRotation(move[1]))
+        for i in range(len(move_rotated)):
+            moveSet = move_rotated[i]
+            found = False
+            for mr in moveSet:
+                if mr in self.plays: 
+                    found = True
+                    total_move_state.append((curr_move[i],mr))
+            if not found:
+                total_move_state.append((curr_move[i], moveSet[0]))
+        return total_move_state
+
+    def isMoveInPlay(self, m_s):
+        move_rotated = []
+        total_move_state = []
+        for move in m_s:
+            move_rotated.append(self.allRotation(move))
+        for moveSet in move_rotated:
+            found = False
+            for mr in moveSet:
+                if mr in self.plays: 
+                    found = True
+                    total_move_state.append(mr)
+                    break
+            if not found: return False, None
+        return True, total_move_state
+                    
+        

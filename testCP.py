@@ -19,13 +19,16 @@ def legal_plays (fullPos, sList):
     return legalPlay
 
 def test():
-    for i in range(2):
+    print("Running")
+    for i in range(75):
+        print(i)
         color = "black"
         whiteTurn, blackTurn = 0,0
         b = Board(5)
         cpB = CPBoard(b)
-        mc = MonteCarlo(cpB, time=15, max_moves=10)
+        mc = MonteCarlo(cpB, time=5, max_moves=20)
         fullPos = []
+        prevPos = (-1,-1)
         for i in range(5):
             for j in range(5):
                 fullPos.append((i, j))
@@ -35,7 +38,12 @@ def test():
                 blackTurn +=1
                 bList = list(legal_plays(fullPos, b.stoneL))
                 bMove = choice(bList)
+                if bMove == prevPos:
+                    bList.remove(bMove)
+                    bMove = choice(bList)
                 b.add(bMove[0], bMove[1], color)
+                b.updateCPState(mc)
+                prevPos = bMove
             else:
                 whiteTurn += 1
                 b.updateCPState(mc)
@@ -43,8 +51,8 @@ def test():
                 b.add(wMove[0], wMove[1], color)
             b.legalBoard()
             color = "white" if color == "black" else "black"
-        print(blackTurn, whiteTurn, b.getBoard())
-
+    print("Done")
+    
 def main():
     test()
     

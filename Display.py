@@ -1,4 +1,5 @@
 from tkinter import *
+from CP import *
 from Board import *
 
 class Display(object):
@@ -41,6 +42,8 @@ class Display(object):
         self.inGame = False
         self.endGame = False
         self.chooseNumPlayer = False
+        cpB = CPBoard(self.gmBoard)
+        self.CP = MonteCarlo(cpB, time=5, max_moves=20)
     
     def mousePressed(self, event, data):
         data.mouseX = event.x
