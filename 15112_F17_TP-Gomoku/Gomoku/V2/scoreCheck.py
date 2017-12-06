@@ -1,15 +1,4 @@
-import copy
-b =[ [  None,  None,  None,  None,  None,  None,  None,  None,  None,  None,  None ],
-    [  None,  None,  None,  None,  None,  None,  None,  None,  None,  None,  None ],
-    [  None,  None,  None,  None,  None,  None,  None,  None,  None,  None,  None ],
-    [  None,  None,  None,  None,  None,  "black",  None,  None,  None,  None,  None ],
-    [  None,  None,  None,  None, None,  "black",  None,  None,  None,  None,  None ],
-    [  None,  None,  None,  None,  None, "black",  None,  "white",  None,  None,  None ],
-    [  None,  None,  None,  None,  None,  "black", "white",  None,  None,  None,  None ],
-    [  None,  None,  None,  None,  None,  "white",  None, None,  None,  None,  None ],
-    [  None,  None,  None,  None,  None,  None,  None,  None,  None,  None,  None ],
-    [  None,  None,  None,  None,  None,  None,  None,  None,  None,  None,  None ],
-    [  None,  None,  None,  None,  None,  None,  None,  None,  None,  None,  None ]]
+b = [[None, None, None, None, None, None, None, None, None, None, None], [None, None, None, None, None, None, None, None, None, None, None], [None, None, None, None, None, None, None, None, None, None, None], [None, None, None, None, None, None, None, None, None, None, None], [None, None, None, None, 'white', None, None, None, None, None, None], [None, None, None, None, None, 'black', None, None, None, None, None], [None, None, None, None, None, None, 'white', None, None, None, None], [None, None, None, None, None, None, None, 'black', None, None, None], [None, None, None, None, None, None, None, None, None, None, None], [None, None, None, None, None, None, None, None, None, None, None], [None, None, None, None, None, None, None, None, None, None, None]]
 
 def maxItemLength(a):
     maxLen = 0
@@ -62,20 +51,20 @@ oppScoreKey = {"AAAAA": 50000*sc, "+AAAA+": 4320*sc,
                     "++A+A+": 120*sc, "+A+A++": 120*sc,
                     "+++A++": 20*sc, "++A+++": 20*sc}
 
-startPlayer = "white"
+startPlayer = "black"
 boardSize = 11
 
 def getVertScore(pos, state, player):
     score = 0
     code = ''
     sk = {}
-    if state[pos[0]][pos[1]] == startPlayer: sk = scoreKey
+    if state[pos[0]][pos[1]] == player: sk = scoreKey
     else: sk = oppScoreKey
     for i in range(-4, 5):
         key = pos[1] + i
         if key >=0 and key < boardSize:
             if state[pos[0]][key] == None: code = code + '+'
-            elif state[pos[0]][key] == startPlayer: code = code + 'O'
+            elif state[pos[0]][key] == player: code = code + 'O'
             else: code = code + 'A'
     
     print("Vert Code", code)
@@ -89,13 +78,13 @@ def getHorScore(pos, state, player):
     score = 0
     code = ''
     sk = {}
-    if state[pos[0]][pos[1]] == startPlayer: sk = scoreKey
+    if state[pos[0]][pos[1]] == player: sk = scoreKey
     else: sk = oppScoreKey
     for i in range(-4, 5):
         key = pos[0] + i
         if key >=0 and key < boardSize:
             if state[key][pos[1]] == None: code = code + '+'
-            elif state[key][pos[1]] == startPlayer: code = code + 'O'
+            elif state[key][pos[1]] == player: code = code + 'O'
             else: code = code + 'A'
             
     print("Hoz code", code)
@@ -108,14 +97,14 @@ def getPosXScore(pos, state, player):
     score = 0
     code = ''
     sk = {}
-    if state[pos[0]][pos[1]] == startPlayer: sk = scoreKey
+    if state[pos[0]][pos[1]] == player: sk = scoreKey
     else: sk = oppScoreKey
     for i in range(-4, 5):
         r = pos[1] - i
         c = pos[0] + i
         if r >=0 and c < boardSize and r >=0 and r < boardSize:
             if state[r][c] == None: code = code + '+'
-            elif state[r][c] == startPlayer: code = code + 'O'
+            elif state[r][c] == player: code = code + 'O'
             else: code = code + 'A'
     
     print("Px code", code)
@@ -127,7 +116,7 @@ def getPosXScore(pos, state, player):
 def getNegXScore(pos, state, player):
     score = 0
     sk = {}
-    if state[pos[0]][pos[1]] == startPlayer: sk = scoreKey
+    if state[pos[0]][pos[1]] == player: sk = scoreKey
     else: sk = oppScoreKey
     code = ''
     for i in range(-4, 5):
@@ -135,7 +124,7 @@ def getNegXScore(pos, state, player):
         c = pos[0] + i
         if r >=0 and c < boardSize and r >=0 and r < boardSize:
             if state[r][c] == None: code = code + '+'
-            elif state[r][c] == startPlayer: code = code + 'O'
+            elif state[r][c] == player: code = code + 'O'
             else: code = code + 'A'
     
     print("Neg X code", code)
@@ -163,14 +152,6 @@ def getUtility(node, player):
             # if node[row][col] == player:
             #     sumScore += self.getPosScore((row,col), node, player)
     return sumScore
-
-def getPossibleScore(pos, state, player):
-    state = copy.deepcopy(state)
-    state[pos[0]][pos[1]] = player
-    score = getPosScore(pos, state, player)
-    return score
-
-b = [[None, None, None, None, None, None, None, None, None, None, None], [None, None, None, None, None, None, None, None, None, None, None], [None, None, None, None, None, None, None, None, None, None, None], [None, None, None, None, None, None, None, None, None, None, None], [None, None, None, None, None, None, None, None, 'white', None, None], [None, None, None, None, 'black', 'black', 'black', 'white', None, None, None], [None, None, None, None, None, None, 'white', None, None, None, None], [None, None, None, None, 'black', 'white', None, None, None, None, None], [None, None, None, None, 'black', None, None, None, None, None, None], [None, None, None, None, None, None, None, None, None, None, None], [None, None, None, None, None, None, None, None, None, None, None]]
-print(getPossibleScore((8,4), b, "white"))
+b = [[None, None, None, None, None, None, None, None, None, None, None], [None, None, None, None, None, None, None, None, None, None, None], [None, None, None, None, None, None, None, None, None, None, None], [None, None, None, None, None, 'black', None, None, None, None, None], [None, None, None, None, None, 'black', None, None, None, None, None], [None, None, None, None, None, 'black', None, None, None, None, None], [None, None, None, None, None, 'black', None, None, None, None, None], [None, None, None, 'white', 'white', 'white', None, None, None, None, None], [None, None, None, None, None, None, None, None, None, None, None], [None, None, None, None, None, None, None, None, None, None, None], [None, None, None, None, None, None, None, None, None, None, None]]
 print2dList(b)
-#print(getUtility(b, "black"))
+print(getUtility(b, "black"))

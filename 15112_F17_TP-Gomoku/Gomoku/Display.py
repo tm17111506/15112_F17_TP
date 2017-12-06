@@ -121,10 +121,11 @@ class Display(object):
             data.dropped=True
             if self.numPlayer == 1:
                 if data.color == "black":
-                    self.gmBoard.add(mx, my, data.color)
+                    self.gmBoard.add(my, mx, data.color)
+                    print(mx, my)
                     print("Starting CP")
-                    print(mx, my, self.gmBoard.getBoard())
-                    newState = self.alphaBeta.alpha_beta_search(self.gmBoard.getBoard(), (mx, my))
+                    print(self.gmBoard.getBoard())
+                    newState = self.alphaBeta.alpha_beta_search(self.gmBoard.getBoard())
                     self.gmBoard.setBoard(newState)
                     print("Done")
                     #Play AlphaBeta Move of Gomoku
@@ -169,8 +170,8 @@ class Display(object):
         for row in range(len(board)):
             for col in range(len(board[0])):
                 if board[row][col] != None:
-                    x = row*self.bWidth + data.margin
-                    y = col*self.bHeight + data.margin
+                    x = col*self.bWidth + data.margin
+                    y = row*self.bHeight + data.margin
                     canvas.create_oval(x-data.sr, y-data.sr, x+data.sr, y+data.sr,
                                         fill = board[row][col])
         

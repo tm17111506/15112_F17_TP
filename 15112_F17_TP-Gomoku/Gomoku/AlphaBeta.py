@@ -21,7 +21,7 @@ class AlphaBeta:
                          "OOO+O": 720, "++OO++": 120,
                          "++O+O+": 120, "+O+O++": 120,
                          "+++O++": 20, "++O+++": 20}
-        sc = -0.8 #scale for opp color
+        sc = -0.9 #scale for opp color
         self.oppScoreKey = {"AAAAA": 50000*sc, "+AAAA+": 4320*sc,
                             "+AAA++": 720*sc, "++AAA+": 720*sc,
                             "+AA+A+": 720*sc, "+A+AA+": 720*sc,
@@ -32,15 +32,12 @@ class AlphaBeta:
                             "+++A++": 20*sc, "++A+++": 20*sc}
                             
         self.emptyBoard = [[None for i in range(self.boardSize)] for j in range(self.boardSize)]
-        self.prevScore = 0
-        self.prevPlayer = "black"
 
-    def alpha_beta_search(self, node, prevMove):
+    def alpha_beta_search(self, node):
         infinity = float('inf')
         best_val = -infinity
         beta = infinity
         player = self.startPlayer
-        self.prevScore = self.getPosScore(prevMove, node, self.prevPlayer)
         
         if node == self.emptyBoard:
             node[int(self.boardSize/2)][int(self.boardSize/2)] = player
@@ -94,12 +91,6 @@ class AlphaBeta:
     #                     #
 
     # successor states in a game tree are the child nodes...
-    def getPossibleScore(self, pos, state, player):
-        state = copy.deepcopy(state)
-        state[pos[0]][pos[1]] = player
-        score = self.getPosScore(pos, state, player)
-        return score
-    
     def getPosSurrounding(self, position, state):
         legalPos=set()
         for i in range(-1,2):
@@ -110,7 +101,7 @@ class AlphaBeta:
                 except:
                     continue
         return legalPos
-    
+        
     def getStateLegalPos(self, state, player):
         legalPosition = set()
         sortedL = []
@@ -123,9 +114,8 @@ class AlphaBeta:
         
         legalPosition = list(legalPosition)
         sortLegalPos = []
-        #print("Legal pos", legalPosition)
         for elem in legalPosition:
-            sortLegalPos.append((elem, self.getPosScore(elem, state[:], player)+self.prevScore))
+            sortLegalPos.append((elem, self.getPosScore(elem, state, player)))
         reverseSort=None
         if player == self.startPlayer: reverseSort = True
         else: reverseSort = False
@@ -156,13 +146,13 @@ class AlphaBeta:
         score = 0
         code = ''
         sk = {}
-        if state[pos[0]][pos[1]] == self.startPlayer: sk = self.scoreKey
+        if state[pos[0]][pos[1]] == player: sk = self.scoreKey
         else: sk = self.oppScoreKey
         for i in range(-4, 5):
             key = pos[1] + i
             if key >=0 and key < self.boardSize:
                 if state[pos[0]][key] == None: code = code + '+'
-                elif state[pos[0]][key] == self.startPlayer: code = code + 'O'
+                elif state[pos[0]][key] == player: code = code + 'O'
                 else: code = code + 'A'
         
         for pattern in sk:
@@ -174,13 +164,13 @@ class AlphaBeta:
         score = 0
         code = ''
         sk = {}
-        if state[pos[0]][pos[1]] == self.startPlayer: sk = self.scoreKey
+        if state[pos[0]][pos[1]] == player: sk = self.scoreKey
         else: sk = self.oppScoreKey
         for i in range(-4, 5):
             key = pos[0] + i
             if key >=0 and key < self.boardSize:
                 if state[key][pos[1]] == None: code = code + '+'
-                elif state[key][pos[1]] == self.startPlayer: code = code + 'O'
+                elif state[key][pos[1]] == player: code = code + 'O'
                 else: code = code + 'A'
                 
         for pattern in sk:
@@ -191,14 +181,14 @@ class AlphaBeta:
         score = 0
         code = ''
         sk = {}
-        if state[pos[0]][pos[1]] == self.startPlayer: sk = self.scoreKey
+        if state[pos[0]][pos[1]] == player: sk = self.scoreKey
         else: sk = self.oppScoreKey
         for i in range(-4, 5):
             r = pos[1] - i
             c = pos[0] + i
             if r >=0 and c < self.boardSize and r >=0 and r < self.boardSize:
                 if state[r][c] == None: code = code + '+'
-                elif state[r][c] == self.startPlayer: code = code + 'O'
+                elif state[r][c] == player: code = code + 'O'
                 else: code = code + 'A'
                 
         for pattern in sk:
@@ -208,7 +198,7 @@ class AlphaBeta:
     def getNegXScore(self, pos, state, player):
         score = 0
         sk = {}
-        if state[pos[0]][pos[1]] == self.startPlayer: sk = self.scoreKey
+        if state[pos[0]][pos[1]] == player: sk = self.scoreKey
         else: sk = self.oppScoreKey
         code = ''
         for i in range(-4, 5):
@@ -216,7 +206,7 @@ class AlphaBeta:
             c = pos[0] + i
             if r >=0 and c < self.boardSize and r >=0 and r < self.boardSize:
                 if state[r][c] == None: code = code + '+'
-                elif state[r][c] == self.startPlayer: code = code + 'O'
+                elif state[r][c] == player: code = code + 'O'
                 else: code = code + 'A'
         
         for pattern in sk:
