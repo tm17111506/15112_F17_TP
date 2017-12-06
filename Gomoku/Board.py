@@ -11,6 +11,8 @@ class Board(object):
         self.calcualted=False
         self.stoneL = []
         self.currPlayer = "black"
+        self.gomokuWinLength = 5
+        self.winner=None
     
     def add(self, row, col, color):
         self.stoneL.append((row, col))
@@ -23,6 +25,9 @@ class Board(object):
     
     def getBoard(self):
         return self.board
+    
+    def setBoard(self, b):
+        self.board = b
     
     def checkSurrounded(self, x, y, color, l=None):
         if l == None: 
@@ -100,8 +105,113 @@ class Board(object):
     def resetScore(self):
         self.score = {"black":0, "white":0}
         self.calcualted = False
+        self.winner = None
     
-    def determineScore(self):
+    def checkPosXScore(self):
+        startPos1 = (0,4)
+        startPos2 = (6,10)
+        midPos1, midPos2 = (4,6), (6,4)
+        for i in range(self.size//2+1):
+            pos1 = (startPos1[0], startPos1[1]+i)
+            pos2 = (startPos2[0]-i, startPos2[1])
+            for j in range(i+1):
+                l_1 = [self.board[pos1[0]+n+j][pos1[1]-n-j] for n in range(self.gomokuWinLength)]
+                l_2 = [self.board[pos2[0]+n+j][pos2[1]-n-j] for n in range(self.gomokuWinLength)]
+                if None not in l_1:
+                    if "black" not in l_1:
+                        self.winner = "white"
+                        return True
+                    if "white" not in l_1:
+                        self.winner = "black"
+                        return True
+                if None not in l_2:
+                    if "black" not in l_2:
+                        self.winner = "white"
+                        return True
+                    if "white" not in l_2:
+                        self.winner = "black"
+                        return True
+        if self.board[midPos1[0]][midPos1[1]] != None or self.board[midPos2[0]][midPos2[1]] != None:
+            for k in range(self.size//2+1):
+                pos=(self.size-1-k, k)
+                l=[self.board[pos[0]-n][pos[1]+n] for n in range(self.gomokuWinLength)]
+                if None not in l:
+                    if "black" not in l:
+                        self.winner = "white"
+                        return True
+                    if "white" not in l:
+                        self.winner = "black"
+                        return True
+        return False
+                
+    def checkNegXScore(self):
+        startPos1 = (0,6)
+        startPos2 = (6,0)
+        midPos1, midPos2 = (4,4), (6,6)
+        for i in range(self.size//2+1):
+            pos1 = (startPos1[0], startPos1[1]-i)
+            pos2 = (startPos2[0]-i, startPos2[1])
+            for j in range(i+1):
+                l_1 = [self.board[pos1[0]+n+j][pos1[1]+n+j] for n in range(self.gomokuWinLength)]
+                l_2 = [self.board[pos2[0]+n+j][pos2[1]+n+j] for n in range(self.gomokuWinLength)]
+                if None not in l_1:
+                    if "black" not in l_1:
+                        self.winner = "white"
+                        return True
+                    if "white" not in l_1:
+                        self.winner = "black"
+                        return True
+                if None not in l_2:
+                    if "black" not in l_2:
+                        self.winner = "white"
+                        return True
+                    if "white" not in l_2:
+                        self.winner = "black"
+                        return True
+        return False
+    
+    def checkVertScore(self):
+        midPos = (4,6)
+        for col in range(len(self.board[0])):
+            if self.board[midPos[0]][col] == None or \
+                self.board[midPos[1]][col] == None:
+                    continue
+            for i in range(len(self.board)-self.gomokuWinLength+1):
+                l = []
+                l=[self.board[i+j][col] for j in range(self.gomokuWinLength)]
+                if None not in l:
+                    if "black" not in l:
+                        self.winner = "white"
+                        return True
+                    if "white" not in l:
+                        self.winner = "black"
+                        return True
+        return False
+        
+    def checkHorzScore(self):
+        midPos = (4,6)
+        for row in range(len(self.board)):
+            if self.board[row][midPos[0]] == None or \
+                self.board[row][midPos[1]] == None:
+                    continue
+            for i in range(len(self.board)-self.gomokuWinLength+1):
+                if None not in self.board[row][i:i+self.gomokuWinLength]:
+                    if "black" not in self.board[row][i:i+self.gomokuWinLength]:
+                        self.winner = "white"
+                        return True
+                    if "white" not in self.board[row][i:i+self.gomokuWinLength]:
+                        self.winner = "black"
+                        return True
+        return False
+    
+    def determineGomokuScore(self):
+        self.checkPosXScore()
+        self.checkNegXScore()
+        self.checkVertScore()
+        self.checkHorzScore()
+        return self.winner
+    
+    def determineGoScore(self):
         if not self.calcualted:
             bSet, wSet = set(), set()
             #Number of stones on the board
@@ -109,7 +219,7 @@ class Board(object):
                 for col in range(len(self.board[0])):
                     if self.board[row][col] != None:
                         self.score[self.board[row][col]] += 1
-                    elif self.countNone() < 24: #If == None
+                    elif self.countNone() < 120: #If == None
                         self.checkSurrounded(row, col, "black")
                         b = self.surrounded["black"]
                         self.checkSurrounded(row, col, "white")
@@ -126,18 +236,14 @@ class Board(object):
         else: win = None
         return (self.score["black"], self.score["white"], win)
     
-    def updateCPState(self, CP):
-        state = [(i[0], i[1], self.board[i[0]][i[1]]) for i in self.stoneL]
-        CP.update(state)
-    
-    def calcCPScore(self, step):
-        row, col, color = step
-        self.add(row, col, color)
-        self.legalBoard()
-        
-    def checkEndGame(self):
+    def checkEndGameGo(self):
         numNone = self.countNone()
         if numNone <= self.size**2 * 0.15:
+            return True
+        return False
+    
+    def checkEndGameGomoku(self):
+        if self.determineGomokuScore() != None:
             return True
         return False
     
@@ -147,4 +253,3 @@ class Board(object):
             for elem in l:
                 if elem == None: num += 1
         return num
-        

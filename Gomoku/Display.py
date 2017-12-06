@@ -1,10 +1,10 @@
 from tkinter import *
-from CP import *
+from AlphaBeta import *
 from Board import *
 
 class Display(object):
-    def __init__(self):
-        self.boardSize = 4
+    def __init__(self, boardSize):
+        self.boardSize = boardSize
         self.boardColor = "light goldenrod"
         self.bWidth, self.bHeight = 0,0
         self.gmBoard = None
@@ -12,11 +12,9 @@ class Display(object):
         self.endGame = False
         self.winState = None
         self.chooseNumPlayer = False
-        self.CP = None
         self.numPlayer = 0
-    
-    def getCP(self, CP):
-        self.CP = CP
+        self.gameChoice = None #(1 = Go, 2 = GoMoku)
+        self.alphaBeta = AlphaBeta(boardSize, "white")
     
     def draw(self):
         self.run()
@@ -26,7 +24,7 @@ class Display(object):
         data.preview = False
         data.mouseX, data.mouseY = 0,0
         #Coordinates for preview rect
-        data.previewX, data.previewY, data.previewR = 0,0, 15
+        data.previewX, data.previewY, data.previewR = 0,0, 10
         #Width and height of each board boxes
         self.bWidth = (data.width-2*data.margin)/self.boardSize
         self.bHeight = (data.height-2*data.margin)/self.boardSize
@@ -34,7 +32,7 @@ class Display(object):
         #Draw stones
         data.dropped = False
         data.color = "black"
-        data.sr = 15
+        data.sr = 10
     
     def restartGame(self, data):
         self.init(data)
@@ -42,14 +40,15 @@ class Display(object):
         self.inGame = False
         self.endGame = False
         self.chooseNumPlayer = False
-        cpB = CPBoard(self.gmBoard)
-        self.CP = MonteCarlo(cpB, time=5, max_moves=20)
+        self.gameChoice = None
+        #Define new AlphaBeta
     
     def mousePressed(self, event, data):
         data.mouseX = event.x
         data.mouseY = event.y
         self.findRange(data)
-        self.gmBoard.legalBoard()
+        if self.gameChoice == 1:
+            self.gmBoard.legalBoard()
         
     def keyPressed(self, event, data):
         if not self.chooseNumPlayer and event.keysym == '1':
@@ -59,26 +58,48 @@ class Display(object):
             self.chooseNumPlayer = True
             self.numPlayer = 2
         if self.chooseNumPlayer:
-            if not self.endGame and event.keysym == 's':
-                self.inGame = True
-                self.endGame = False
+            if self.numPlayer == 1:
+                self.gameChoice = 2
+            elif self.numPlayer == 2:
+                if event.keysym == 'g':
+                    self.gameChoice = 1
+                if event.keysym == 'm':
+                    self.gameChoice = 2
+            
+            if not self.endGame:
+                if self.numPlayer == 1:
+                    if event.keysym == 's':
+                        self.inGame = True
+                        self.endGame = False
+                elif self.numPlayer == 2:
+                    if self.gameChoice == 1: 
+                        if event.keysym == 's':
+                            self.inGame = True
+                            self.endGame = False
+                    elif self.gameChoice == 2:
+                        if event.keysym == 's':
+                            self.inGame = True
+                            self.endGame = False
+            
+            if self.numPlayer == 2 and self.gameChoice == 1 and self.inGame:
+                if event.keysym == 'Return':
+                    self.inGame = False
+                    self.endGame = True
+
             if event.keysym == 'r':
                 self.restartGame(data)
-            if event.keysym == 'Return':
-                self.winState = self.gmBoard.determineScore()
-                self.endGame = True
-                self.inGame = False
     
     def timerFired(self, data):
-        if data.color == "white" and self.numPlayer == 1 and self.inGame:
-            self.gmBoard.updateCPState(self.CP)
-            move = self.CP.get_play()
-            self.gmBoard.add(move[0], move[1], "white")
-            data.color = "white" if data.color == "black" else "black"
-        if self.gmBoard.checkEndGame():
-            self.winState = self.gmBoard.determineScore()
+        if self.gmBoard.checkEndGameGomoku():
             self.endGame = True
             self.inGame = False
+            
+    
+    def determineWin(self, data):
+        if self.gameChoice == 1 and self.endGame:
+            self.winState = self.gmBoard.determineGoScore()
+        elif self.gameChoice == 2 and self.endGame:
+            self.winState = self.gmBoard.determineGomokuScore()
     
     def findRange(self, data):
         mx, my = 0,0
@@ -101,13 +122,14 @@ class Display(object):
             if self.numPlayer == 1:
                 if data.color == "black":
                     self.gmBoard.add(mx, my, data.color)
-                # if data.color == "white":
-                #     self.gmBoard.updateCPState(self.CP)
-                #     move = self.CP.get_play()
-                #     self.gmBoard.add(move[0], move[1], "white")
+                    print("Starting CP")
+                    newState = self.alphaBeta.alpha_beta_search(self.gmBoard.getBoard())
+                    self.gmBoard.setBoard(newState)
+                    print("Done")
+                    #Play AlphaBeta Move of Gomoku
             else:
                 self.gmBoard.add(mx, my, data.color)
-            data.color = "white" if data.color == "black" else "black"
+                data.color = "white" if data.color == "black" else "black"
         else:
             data.dropped=False
         
@@ -160,7 +182,7 @@ class Display(object):
             canvas.create_line(data.margin+i*dx, data.margin, 
                                 data.margin+i*dx, data.height-data.margin)
     
-    def drawStartScreen(self, canvas, data):
+    def drawGoStartScreen(self, canvas, data):
         start=70
         margin = 50
         canvas.create_text(data.width/2, margin+start, text = "GO Game!",
@@ -172,10 +194,20 @@ class Display(object):
         canvas.create_text(data.width/2, margin*4+start, text = "Press 'Enter' to End",
                             font="Times 16")
     
+    def drawGomokuStartScreen(self, canvas, data):
+        start=70
+        margin = 50
+        canvas.create_text(data.width/2, margin+start, text = "Gomoku!",
+                            font="Times 26 bold")
+        canvas.create_text(data.width/2, margin*2+start, text = "Press 's' to start",
+                            font="Times 16")
+        canvas.create_text(data.width/2, margin*3+start, text = "Press 'r' to restart",
+                            font="Times 16")
+    
     def drawUserScreen(self, canvas, data):
         start=70
         margin = 50
-        canvas.create_text(data.width/2, margin+start, text = "GO Game!",
+        canvas.create_text(data.width/2, margin+start, text = "Go...Moku Game!",
                             font="Times 26 bold")
         canvas.create_text(data.width/2, margin*2+start, text = "Choose Number of PLayers",
                             font="Times 16")
@@ -184,10 +216,11 @@ class Display(object):
         canvas.create_text(data.width/2, margin*4+start, text = "Press '2' for 2 player",
                             font="Times 16")
     
-    def drawEndScreen(self, canvas, data):
+    def drawGoEndScreen(self, canvas, data):
+        self.determineWin(data)
         blackScore, whiteScore, win = self.winState
         margin = 50
-        canvas.create_text(data.width/2, data.height/2-margin*2, text = "Game Over!",
+        canvas.create_text(data.width/2, data.height/2-margin*2, text = "Go Game Over!",
                             font="Helvetica 26 bold")
         canvas.create_text(data.width/2, data.height/2-margin, text = "%s wins!"%win,
                             font="Helvetica 20 bold")
@@ -196,19 +229,58 @@ class Display(object):
         canvas.create_text(data.width/2, data.height/2+margin/2, text = "White Score: %d"%whiteScore,
                             font="Helvetica 10 bold")
     
+    def drawGomokuEndScreen(self, canvas, data):
+        self.determineWin(data)
+        win = self.winState
+        margin = 50
+        canvas.create_text(data.width/2, data.height/2-margin*2, text = "Gomoku Game Over!",
+                            font="Helvetica 26 bold")
+        canvas.create_text(data.width/2, data.height/2-margin, text = "%s wins!"%win,
+                            font="Helvetica 20 bold")
+    
+    def drawChooseGame(self, canvas, data):
+        start=70
+        margin = 50
+        canvas.create_text(data.width/2, margin+start, text = "Go...Moku Game!",
+                            font="Times 26 bold")
+        canvas.create_text(data.width/2, margin*2+start, text = "Choose which game to play",
+                            font="Times 16")
+        canvas.create_text(data.width/2, margin*3+start, text = "Press 'g' for Go",
+                            font="Times 16")
+        canvas.create_text(data.width/2, margin*4+start, text = "Press 'm' for Gomoku",
+                            font="Times 16")
+    
     def redrawAll(self, canvas, data):
         if not self.chooseNumPlayer:
             self.drawUserScreen(canvas, data)
         else:
             if not self.inGame:
-                if self.endGame: self.drawEndScreen(canvas, data)
-                else: self.drawStartScreen(canvas, data)
-            elif self.endGame:
-                self.drawEndScreen(canvas, data)
+                if self.endGame:
+                    if self.gameChoice == 1:
+                        self.drawGoEndScreen(canvas, data)
+                    elif self.gameChoice == 2:
+                        self.drawGomokuEndScreen(canvas, data)
+                else:
+                    if self.numPlayer == 1:
+                        self.drawGomokuStartScreen(canvas, data)
+                    else:
+                        if self.gameChoice == None:
+                            self.drawChooseGame(canvas, data)
+                        else:
+                            if self.gameChoice == 1:
+                                self.drawGoStartScreen(canvas, data)
+                            elif self.gameChoice == 2:
+                                self.drawGomokuStartScreen(canvas, data)
             else:
                 self.drawBoard(canvas, data)
                 self.drawStone(canvas, data)
                 if not data.dropped: self.drawPreview(canvas, data)
+
+            # if not self.inGame:
+            #     if self.endGame: self.drawEndScreen(canvas, data)
+            #     else: self.drawStartScreen(canvas, data)
+            # elif self.endGame:
+            #     self.drawEndScreen(canvas, data)
        
     def run(self, width=400, height=400):
         def redrawAllWrapper(canvas, data):

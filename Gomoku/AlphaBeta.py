@@ -120,6 +120,7 @@ class AlphaBeta:
         if player == self.startPlayer: reverseSort = True
         else: reverseSort = False
         sortLegalPos.sort(key=lambda tup: tup[1], reverse=reverseSort)
+        #print(self.startPlayer, player, sortLegalPos)
         for pos in sortLegalPos:
             sortedL.append(pos[0])
         # if len(sortedL) > 10:
@@ -213,7 +214,6 @@ class AlphaBeta:
         return score
     
     def getPosScore(self, pos, state, player):
-        score=0
         score = self.getVertScore(pos, state, player) + \
                 self.getHorScore(pos, state, player) + \
                 self.getPosXScore(pos, state, player) + \
