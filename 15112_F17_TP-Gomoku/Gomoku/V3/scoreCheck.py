@@ -1,27 +1,4 @@
-b = [[None, None, None, None, None, None, None, None, None, None, None], [None, None, None, None, None, None, None, None, None, None, None], [None, None, None, None, None, None, None, None, None, None, None], [None, None, None, None, None, None, None, None, None, None, None], [None, None, None, None, 'white', None, None, None, None, None, None], [None, None, None, None, None, 'black', None, None, None, None, None], [None, None, None, None, None, None, 'white', None, None, None, None], [None, None, None, None, None, None, None, 'black', None, None, None], [None, None, None, None, None, None, None, None, None, None, None], [None, None, None, None, None, None, None, None, None, None, None], [None, None, None, None, None, None, None, None, None, None, None]]
 import copy
-
-        # self.scoreKey = {"+OOOO+": 300000,
-        #                  "OOOO+": 2500, "+OOOO": 2500,
-        #                  "OOO+O": 3000, "O+OOO": 3000,
-        #                  "OO+OO": 2600, "++OOO++": 3000,
-        #                  "OOO++": 500, "+O+OO+": 800,
-        #                  "O++OO": 600, "O+O+O": 550,
-        #                  "+++OO+++": 650, "OO+++": 150,
-        #                  "+O++O+": 200, "+++OO": 150,
-        #                  "++OOO": 500, "+OO+O+": 800,
-        #                  "OO++O": 600, "+++OO": 150}
-        # sc = -1.2 #scale for opp color
-        # self.oppScoreKey = {"+AAAA+": 300000,
-        #                  "AAAA+": 2500*sc, "+AAAA": 2500*sc,
-        #                  "AAA+A": 3000*sc, "A+AAA": 3000*sc,
-        #                  "AA+AA": 2600*sc, "++AAA++": 3000*sc,
-        #                  "AAA++": 500*sc, "+A+AA+": 800*sc,
-        #                  "A++AA": 600*sc, "A+A+A": 550*sc,
-        #                  "+++AA+++": 650*sc, "AA+++": 150*sc,
-        #                  "+A++A+": 200*sc, "+++AA": 150*sc,
-        #                  "++AAA": 500*sc, "+AA+A+": 800*sc,
-        #                  "AA++A": 600*sc, "+++AA": 150*sc}
 
 def maxItemLength(a):
     maxLen = 0
@@ -182,6 +159,11 @@ def getPossibleScore(pos, state, player, prevMove):
     score =  ws + bs
     #print(player, score)
     return score
+    
+def getBoardScore(state, player):
+    # get a list of all possible "rows" (including row, column, posd, negd)
+    # loop through each "row" and calculate score
+    
 
  #        0      1      2      3      4       5     6      7      8      9       10
 b = [ [  None,  None,  None,  None,  None,  None,  None,  None,  None,  None,  None ],     #0
@@ -196,4 +178,3 @@ b = [ [  None,  None,  None,  None,  None,  None,  None,  None,  None,  None,  N
       [  None,  None,  None,  None,  None,  None,  None,  None,  None,  None,  None ],     #9
       [  None,  None,  None,  None,  None,  None,  None,  None,  None,  None,  None ]]     #10
 
-print(getPossibleScore((5,6), b, "white", (2,5)))

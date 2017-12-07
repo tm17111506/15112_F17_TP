@@ -1,15 +1,6 @@
-#############################################
-# Display Class
-# Features all the display of the Go..Moku Game
-# Canvas is only implemented in this class
-# Includes all the controls of user input
-#############################################
-
 from tkinter import *
 from AlphaBeta import *
 from Board import *
-
-#############################################
 
 class Display(object):
     def __init__(self, boardSize):
@@ -24,9 +15,7 @@ class Display(object):
         self.numPlayer = 0
         self.gameChoice = None #(1 = Go, 2 = GoMoku)
         self.alphaBeta = AlphaBeta(boardSize, "white")
-        self.prevMove=(-1,-1)
     
-    #Draw function called in main
     def draw(self):
         self.run()
     
@@ -52,15 +41,15 @@ class Display(object):
         self.endGame = False
         self.chooseNumPlayer = False
         self.gameChoice = None
+        #Define new AlphaBeta
     
     def mousePressed(self, event, data):
         data.mouseX = event.x
         data.mouseY = event.y
-        # AlphaBeta AI runs in find range
         self.findRange(data)
         if self.gameChoice == 1:
             self.gmBoard.legalBoard()
-    
+        
     def keyPressed(self, event, data):
         if not self.chooseNumPlayer and event.keysym == '1':
             self.chooseNumPlayer = True
@@ -104,21 +93,14 @@ class Display(object):
         if self.gmBoard.checkEndGameGomoku():
             self.endGame = True
             self.inGame = False
-        
-        #Play AlphaBeta Move of Gomoku
-        if self.numPlayer == 1 and data.color == "white":
-            newState = self.alphaBeta.alpha_beta_search(self.gmBoard.getBoard(),self.prevMove)
-            self.gmBoard.setBoard(newState)
-            data.color = "white" if data.color == "black" else "black"
             
+    
     def determineWin(self, data):
         if self.gameChoice == 1 and self.endGame:
             self.winState = self.gmBoard.determineGoScore()
         elif self.gameChoice == 2 and self.endGame:
             self.winState = self.gmBoard.determineGomokuScore()
     
-    # Finds the preview range of the mouse click
-    # Uses click state to update the posititon of the game board
     def findRange(self, data):
         mx, my = 0,0
         if (data.mouseX-data.margin)%self.bWidth <= self.bWidth/2:
@@ -133,24 +115,27 @@ class Display(object):
         
         px = mx*self.bWidth + data.margin
         py = my*self.bHeight + data.margin
-        self.prevMove = (my, mx)
         
         if data.previewX == px and data.previewY == py and \
-            self.gmBoard.getBoard()[my][mx] == None:
+            self.gmBoard.getBoard()[mx][my] == None:
             data.dropped=True
             if self.numPlayer == 1:
                 if data.color == "black":
-                    self.gmBoard.add(my, mx, data.color)
+                    self.gmBoard.add(mx, my, data.color)
+                    print("Starting CP")
+                    print(mx, my, self.gmBoard.getBoard())
+                    newState = self.alphaBeta.alpha_beta_search(self.gmBoard.getBoard(), (mx, my))
+                    self.gmBoard.setBoard(newState)
+                    print("Done")
+                    #Play AlphaBeta Move of Gomoku
             else:
-                # Play moves for Go game
                 self.gmBoard.add(mx, my, data.color)
-            data.color = "white" if data.color == "black" else "black"
+                data.color = "white" if data.color == "black" else "black"
         else:
             data.dropped=False
-            
+        
         data.previewX, data.previewY = px, py
     
-    #Draws the preview boundry of user input click
     def drawPreview(self, canvas, data):
         buffer=10
         r = data.previewR
@@ -184,8 +169,8 @@ class Display(object):
         for row in range(len(board)):
             for col in range(len(board[0])):
                 if board[row][col] != None:
-                    x = col*self.bWidth + data.margin
-                    y = row*self.bHeight + data.margin
+                    x = row*self.bWidth + data.margin
+                    y = col*self.bHeight + data.margin
                     canvas.create_oval(x-data.sr, y-data.sr, x+data.sr, y+data.sr,
                                         fill = board[row][col])
         
@@ -291,8 +276,13 @@ class Display(object):
                 self.drawBoard(canvas, data)
                 self.drawStone(canvas, data)
                 if not data.dropped: self.drawPreview(canvas, data)
-    
-    #Canvas-Run function taken from 15-112 Website Graphics template
+
+            # if not self.inGame:
+            #     if self.endGame: self.drawEndScreen(canvas, data)
+            #     else: self.drawStartScreen(canvas, data)
+            # elif self.endGame:
+            #     self.drawEndScreen(canvas, data)
+       
     def run(self, width=400, height=400):
         def redrawAllWrapper(canvas, data):
             canvas.delete(ALL)

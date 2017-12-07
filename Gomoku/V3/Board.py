@@ -1,13 +1,5 @@
-#######################################################
-# Game Board
-# - Stores data regarding the current game state
-# - Checks if game has ended
-# - Contains end-game and game methods for Go and Gomoku
-#######################################################
 import copy
  
-#######################################################
-
 class Board(object):
     def __init__(self, boardSize):
         self.size = boardSize
@@ -17,19 +9,16 @@ class Board(object):
         self.surrounded = {"black":set(), "white":set()}
         self.score = {"black":0, "white":0}
         self.calcualted=False
-        self.stoneL = [] #List of play to track played order
+        self.stoneL = []
         self.currPlayer = "black"
         self.gomokuWinLength = 5
         self.winner=None
-        self.prevMove=(-1,-1)
     
-    #Adds a play to the current game state
     def add(self, row, col, color):
         self.stoneL.append((row, col))
         self.board[row][col] = color
         self.currPlayer = color
     
-    #Removes a play from the current game state
     def remove(self, row, col):
         self.board[row][col] = None
         self.stoneL.remove((row, col))
@@ -40,8 +29,6 @@ class Board(object):
     def setBoard(self, b):
         self.board = b
     
-    # Uses back-tracking to check if a certain area are surrounded (Territory)
-    # Specific to Go game
     def checkSurrounded(self, x, y, color, l=None):
         if l == None: 
             l = set()
@@ -64,8 +51,7 @@ class Board(object):
             self.surrounded[color] = set()
             return False
     
-    # Uses back-tracking method to check if an area of stones are captured
-    # by an opponent color
+    #x, y coordinate
     def checkCaptured(self, x, y, color, l=None):
         if l == None: l = set()
         if x<0 or x >= self.size or y < 0 or y >= self.size:
@@ -100,8 +86,6 @@ class Board(object):
                 self.captured = set()
         return capturedL
     
-    # Updates the board to make sure the current game state remains legal
-    # Removes captured, updates score for both side
     def legalBoard(self):
         for stone in self.stoneL:
             row, col = stone[0], stone[1]
@@ -123,13 +107,6 @@ class Board(object):
         self.calcualted = False
         self.winner = None
     
-#############################################
-# Score and End state calculation for Gomoku
-#############################################
-    
-    # Calculates positive diagionals by breaking it down
-    # into to sets of symmetrical diagonals
-    # and one center diagonoal
     def checkPosXScore(self):
         startPos1 = (0,4)
         startPos2 = (6,10)
@@ -154,7 +131,6 @@ class Board(object):
                     if "white" not in l_2:
                         self.winner = "black"
                         return True
-                        
         if self.board[midPos1[0]][midPos1[1]] != None or self.board[midPos2[0]][midPos2[1]] != None:
             for k in range(self.size//2+1):
                 pos=(self.size-1-k, k)
@@ -167,10 +143,7 @@ class Board(object):
                         self.winner = "black"
                         return True
         return False
-            
-    # Calculates negative diagionals by breaking it down
-    # Into to sets of symmetrical diagonals
-    # and one center diagonoal
+                
     def checkNegXScore(self):
         startPos1 = (0,6)
         startPos2 = (6,0)
@@ -193,18 +166,6 @@ class Board(object):
                         self.winner = "white"
                         return True
                     if "white" not in l_2:
-                        self.winner = "black"
-                        return True
-                        
-        if self.board[midPos1[0]][midPos1[1]] != None or self.board[midPos2[0]][midPos2[1]] != None:
-            for k in range(self.size//2+1):
-                pos = (k, k)
-                l = [self.board[pos[0]+n][pos[1]+n] for n in range(self.gomokuWinLength)]
-                if None not in l:
-                    if "black" not in l:
-                        self.winner = "white"
-                        return True
-                    if "white" not in l:
                         self.winner = "black"
                         return True
         return False
@@ -243,8 +204,6 @@ class Board(object):
                         return True
         return False
     
-    # Checks if a list of 5 connected stones have been placed
-    # Returns the color of the winner
     def determineGomokuScore(self):
         self.checkPosXScore()
         self.checkNegXScore()
@@ -252,10 +211,6 @@ class Board(object):
         self.checkHorzScore()
         return self.winner
     
-    # Calculates the end-state score of Go Game
-    # Using Territory Calculation: 
-    #   Number of stones surrounded + number of stone left on the board +
-    #   number of stones captured
     def determineGoScore(self):
         if not self.calcualted:
             bSet, wSet = set(), set()
@@ -264,7 +219,7 @@ class Board(object):
                 for col in range(len(self.board[0])):
                     if self.board[row][col] != None:
                         self.score[self.board[row][col]] += 1
-                    elif self.countNone() < 20: #Number of empty spaces left
+                    elif self.countNone() < 120: #If == None
                         self.checkSurrounded(row, col, "black")
                         b = self.surrounded["black"]
                         self.checkSurrounded(row, col, "white")
@@ -281,7 +236,6 @@ class Board(object):
         else: win = None
         return (self.score["black"], self.score["white"], win)
     
-    # Auto-ends the game of Go if the board is filled up a certain percentage
     def checkEndGameGo(self):
         numNone = self.countNone()
         if numNone <= self.size**2 * 0.15:
